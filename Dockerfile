@@ -14,7 +14,7 @@
 #     >>> docker run --rm -it -p 5555:5555 illagrenan/kubernetes-python-client
 #
 # =====================================================================
-FROM python:3.6.3-alpine
+FROM python:3.6
 LABEL authors="Vašek Dohnal <vaclav.dohnal@gmail.com>"
 
 # ---------------------------------------------------------------------
