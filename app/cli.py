@@ -1,9 +1,16 @@
 # -*- encoding: utf-8 -*-
 # ! python3
 
+import io
 import logging
+import os
+import pprint
 
 import click
+import yaml
+from kubernetes.client import AppsV1beta2Api, BatchV1Api
+
+from cluster_credentials import ClusterCredentialsContextManager
 
 logger = logging.getLogger(__name__)
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -18,10 +25,13 @@ def cli():
 @click.argument('deployment', type=click.STRING)
 @click.argument('container', type=click.STRING)
 @click.argument('image', type=click.STRING)
-@click.option('--namespace', type=click.STRING, default='default')
+@click.option('--server', prompt=False, default=lambda: os.environ.get('KUBERNETES_SERVER'), type=click.STRING)
+@click.option('--namespace', prompt=False, default=lambda: os.environ.get('KUBERNETES_NAMESPACE', 'default'), type=click.STRING)
+@click.option('--user', prompt=False, default=lambda: os.environ.get('KUBERNETES_USER'), type=click.STRING)
+@click.option('--password', prompt=False, default=lambda: os.environ.get('KUBERNETES_PASSWORD'), type=click.STRING)
 @click.option('-v', '--verbose', count=True)
 @click.option('-q', '--quiet', count=True)
-def set_image(deployment: str, container: str, image: str, namespace: str, verbose: int, quiet: int):
+def set_image(deployment: str, container: str, image: str, server: str, namespace: str, user: str, password: str, verbose: int, quiet: int):
     """
     Set image
     """
@@ -31,16 +41,38 @@ def set_image(deployment: str, container: str, image: str, namespace: str, verbo
 
     logger.info("Running `set_image`.")
 
-    # TODO
+    with ClusterCredentialsContextManager(server=server, user=user, password=password):
+        v2_beta = AppsV1beta2Api()
+        body = {
+            "spec":
+                {
+                    "template": {
+                        "spec": {
+                            "containers": [
+                                {
+                                    "name": container,
+                                    "image": image
+                                }
+                            ]
+                        }
+                    }
+                }
+        }
+        api_response = v2_beta.patch_namespaced_deployment(deployment, namespace, body, pretty=True)
+        pprint.pprint(api_response)
 
     logger.info("Done.")
 
 
 @cli.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('manifest_file', type=click.Path(exists=True, file_okay=True, readable=True, resolve_path=True))
+@click.option('--server', prompt=False, default=lambda: os.environ.get('KUBERNETES_SERVER'), type=click.STRING)
+@click.option('--namespace', prompt=False, default=lambda: os.environ.get('KUBERNETES_NAMESPACE', 'default'), type=click.STRING)
+@click.option('--user', prompt=False, default=lambda: os.environ.get('KUBERNETES_USER'), type=click.STRING)
+@click.option('--password', prompt=False, default=lambda: os.environ.get('KUBERNETES_PASSWORD'), type=click.STRING)
 @click.option('-v', '--verbose', count=True)
 @click.option('-q', '--quiet', count=True)
-def apply(manifest_file: str, verbose: int, quiet: int):
+def apply(manifest_file: str, server: str, namespace: str, user: str, password: str, verbose: int, quiet: int):
     """
     Apply manifest file
     """
@@ -50,7 +82,15 @@ def apply(manifest_file: str, verbose: int, quiet: int):
 
     logger.info("Running `apply`.")
 
-    # TODO
+    with ClusterCredentialsContextManager(server=server, user=user, password=password):
+        v1_batch = BatchV1Api()
+
+        with io.open(manifest_file, 'r', encoding='utf-8') as the_file:
+            yaml_gen = yaml.load_all(the_file.read())
+            documents = list(yaml_gen)
+
+        api_response = v1_batch.create_namespaced_job(namespace, documents[0], pretty=True)
+        pprint.pprint(api_response)
 
     logger.info("Done.")
 
