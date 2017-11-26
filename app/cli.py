@@ -24,7 +24,7 @@ def cli():
 @cli.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('deployment', type=click.STRING)
 @click.argument('container', type=click.STRING)
-@click.argument('container2', type=click.STRING)
+@click.argument('container2', type=click.STRING, default='')
 @click.argument('image', type=click.STRING)
 @click.option('--server', prompt=False, default=lambda: os.environ.get('KUBERNETES_SERVER'), type=click.STRING)
 @click.option('--namespace', prompt=False, default=lambda: os.environ.get('KUBERNETES_NAMESPACE', 'default'), type=click.STRING)
@@ -44,21 +44,23 @@ def set_image(deployment: str, container: str, container2: str, image: str, serv
 
     with ClusterCredentialsContextManager(server=server, user=user, password=password):
         v2_beta = AppsV1beta2Api()
+
+        if container2:
+            image_ = [
+                {"name": container, "image": image},
+                {"name": container2, "image": image}
+            ]
+        else:
+            image_ = [
+                {"name": container, "image": image}
+            ]
+
         body = {
             "spec":
                 {
                     "template": {
                         "spec": {
-                            "containers": [
-                                {
-                                    "name": container,
-                                    "image": image
-                                },
-                                {
-                                    "name": container2,
-                                    "image": image
-                                }
-                            ]
+                            "containers": image_
                         }
                     }
                 }
