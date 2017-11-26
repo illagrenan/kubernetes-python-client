@@ -24,6 +24,7 @@ def cli():
 @cli.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('deployment', type=click.STRING)
 @click.argument('container', type=click.STRING)
+@click.argument('container2', type=click.STRING)
 @click.argument('image', type=click.STRING)
 @click.option('--server', prompt=False, default=lambda: os.environ.get('KUBERNETES_SERVER'), type=click.STRING)
 @click.option('--namespace', prompt=False, default=lambda: os.environ.get('KUBERNETES_NAMESPACE', 'default'), type=click.STRING)
@@ -31,7 +32,7 @@ def cli():
 @click.option('--password', prompt=False, default=lambda: os.environ.get('KUBERNETES_PASSWORD'), type=click.STRING)
 @click.option('-v', '--verbose', count=True)
 @click.option('-q', '--quiet', count=True)
-def set_image(deployment: str, container: str, image: str, server: str, namespace: str, user: str, password: str, verbose: int, quiet: int):
+def set_image(deployment: str, container: str, container2: str, image: str, server: str, namespace: str, user: str, password: str, verbose: int, quiet: int):
     """
     Set image
     """
@@ -51,6 +52,10 @@ def set_image(deployment: str, container: str, image: str, server: str, namespac
                             "containers": [
                                 {
                                     "name": container,
+                                    "image": image
+                                },
+                                {
+                                    "name": container2,
                                     "image": image
                                 }
                             ]
